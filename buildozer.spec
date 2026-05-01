@@ -1,0 +1,23 @@
+[app]
+title = Calc
+package.name = calc
+package.domain = org.example
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas
+version = 0.1
+requirements = python3,kivy
+orientation = portrait
+osx.python_version = 3
+osx.kivy_version = 2.3
+fullscreen = 1
+android.api = 34
+android.minapi = 21
+android.sdk = 34
+android.ndk = 27
+android.allow_backup = False
+android.keep_screen_on = False
+android.install_location = auto
+android.wakelock = False
+android.accept_sdk_license = True
+android.add_src = src/
+presplash_color = #1a1a2e
