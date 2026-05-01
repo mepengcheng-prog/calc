@@ -28,22 +28,46 @@ jobs:
             cmake libffi-dev libssl-dev \
             ccache
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Install Buildozer
+        run: |
+          pip install --user buildozer cython
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache Buildozer
+        uses: actions/cache@v4
         with:
-          workdir: .
-          buildozer_version: stable
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+
+      - name: Build with Buildozer
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: |
+          which java
+          java -version
+          buildozer android debug --verbose 2>&1 | tee buildozer-output.log
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: calc-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
 
-      - name: Upload logs if build failed
+      - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-logs
-          path: ~/.buildozer/android/platform/python-for-android/build/**/build.log
+          name: buildozer-build-log
+          path: buildozer-output.log
+
+      - name: Upload .buildozer log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-state
+          path: |
+            buildozer-output.log
+            ~/.buildozer/android/platform/build*/build.log
+            ~/.buildozer/android/platform/python-for-android/build/**/build.log
+          retention-days: 3
