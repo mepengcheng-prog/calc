@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: calc
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -44,6 +40,7 @@ jobs:
           key: ${{ runner.os }}-buildozer-${{ hashFiles('calc/buildozer.spec') }}
 
       - name: Build with Buildozer
+        working-directory: calc
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
@@ -51,12 +48,26 @@ jobs:
           java -version
           buildozer android debug --verbose 2>&1 | tee buildozer-output.log
 
+      - name: List output files
+        if: always()
+        run: |
+          echo "=== calc/bin/ ==="
+          ls -la calc/bin/ 2>&1 || echo "No calc/bin/ directory"
+          echo "=== calc/ ==="
+          ls -la calc/*.apk 2>&1 || echo "No APKs in calc/"
+          echo "=== workspace ==="
+          find . -name "*.apk" -o -name "*.aab" 2>&1 | head -20
+          echo "=== buildozer-output.log ==="
+          tail -50 calc/buildozer-output.log 2>&1 || echo "No log found"
+
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: calc-apk
-          path: calc/bin/*.apk
+          path: |
+            calc/bin/*.apk
+            calc/*.apk
 
       - name: Upload build log on failure
         if: failure()
