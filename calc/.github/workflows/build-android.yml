@@ -5,10 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: calc
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -41,7 +37,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('calc/buildozer.spec') }}
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
 
       - name: Build with Buildozer
         env:
@@ -56,14 +52,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: calc-apk
-          path: calc/bin/*.apk
+          path: bin/*.apk
 
       - name: Upload build log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-build-log
-          path: calc/buildozer-output.log
+          path: buildozer-output.log
 
       - name: Upload .buildozer log on failure
         if: failure()
@@ -71,7 +67,7 @@ jobs:
         with:
           name: buildozer-state
           path: |
-            calc/buildozer-output.log
+            buildozer-output.log
             ~/.buildozer/android/platform/build*/build.log
             ~/.buildozer/android/platform/python-for-android/build/**/build.log
           retention-days: 3
