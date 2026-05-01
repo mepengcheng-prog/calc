@@ -44,21 +44,29 @@ jobs:
         env:
           JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
         run: |
+          set -o pipefail
           which java
           java -version
           buildozer android debug --verbose 2>&1 | tee buildozer-output.log
 
-      - name: List output files
+      - name: Upload full build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-build-log
+          path: calc/buildozer-output.log
+
+      - name: Find APK
         if: always()
         run: |
-          echo "=== calc/bin/ ==="
-          ls -la calc/bin/ 2>&1 || echo "No calc/bin/ directory"
-          echo "=== calc/ ==="
-          ls -la calc/*.apk 2>&1 || echo "No APKs in calc/"
-          echo "=== workspace ==="
-          find . -name "*.apk" -o -name "*.aab" 2>&1 | head -20
-          echo "=== buildozer-output.log ==="
-          tail -50 calc/buildozer-output.log 2>&1 || echo "No log found"
+          echo "Looking for APK/AAB files..."
+          find . -type f \( -name "*.apk" -o -name "*.aab" \) 2>&1 || echo "No APK/AAB found"
+          echo "---"
+          echo "calc/bin/ contents:"
+          ls -la calc/bin/ 2>&1 || echo "(no bin dir)"
+          echo "---"
+          echo "Last 100 lines of build log:"
+          tail -100 calc/buildozer-output.log 2>&1
 
       - name: Upload APK
         if: success()
@@ -69,20 +77,10 @@ jobs:
             calc/bin/*.apk
             calc/*.apk
 
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: buildozer-build-log
-          path: calc/buildozer-output.log
-
       - name: Upload .buildozer log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: buildozer-state
-          path: |
-            calc/buildozer-output.log
-            ~/.buildozer/android/platform/build*/build.log
-            ~/.buildozer/android/platform/python-for-android/build/**/build.log
+          name: buildozer-debug-logs
+          path: ~/.buildozer/
           retention-days: 3
