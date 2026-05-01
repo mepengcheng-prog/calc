@@ -22,31 +22,28 @@ jobs:
           sudo apt install -y \
             git zip unzip \
             openjdk-17-jdk \
-            python3-pip \
             autoconf libtool libltdl-dev \
             pkg-config zlib1g-dev \
             libncurses5-dev libncursesw5-dev libtinfo5 \
             cmake libffi-dev libssl-dev \
             ccache
 
-      - name: Install Buildozer
-        run: |
-          pip install --user buildozer cython
-
-      - name: Cache Buildozer
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.buildozer
-          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
-
       - name: Build with Buildozer
-        run: |
-          export PATH=$HOME/.local/bin:$PATH
-          buildozer android debug 2>&1
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          workdir: .
+          buildozer_version: stable
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: calc-apk
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
+
+      - name: Upload logs if build failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-logs
+          path: ~/.buildozer/android/platform/python-for-android/build/**/build.log
