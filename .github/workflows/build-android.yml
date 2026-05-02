@@ -11,15 +11,70 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workdir: calc
-          buildozer_version: stable
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            git zip unzip \
+            openjdk-17-jdk \
+            autoconf libtool libltdl-dev \
+            pkg-config zlib1g-dev \
+            libncurses5-dev libncursesw5-dev libtinfo5 \
+            cmake libffi-dev libssl-dev \
+            ccache
+
+      - name: Install Buildozer
+        run: |
+          pip install --user buildozer cython
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache Buildozer
+        uses: actions/cache@v4
+        with:
+          path: ~/.buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('calc/buildozer.spec') }}
+
+      - name: Build with Buildozer
+        working-directory: calc
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+        run: |
+          set -o pipefail
+          buildozer android debug --verbose 2>&1 | tee buildozer-output.log
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: calc/buildozer-output.log
+
+      - name: Attach error summary on failure
+        if: failure()
+        working-directory: calc
+        run: |
+          echo "## Buildozer Error Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -100 buildozer-output.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "Full log uploaded as 'build-log' artifact" >> $GITHUB_STEP_SUMMARY
+
+      - name: Find APK
+        if: success()
+        run: |
+          find . -name "*.apk" -o -name "*.aab" | head -10
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: calc-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: |
+            calc/bin/*.apk
+            calc/*.apk
+            ./bin/*.apk
